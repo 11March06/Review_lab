@@ -1,6 +1,6 @@
-# LINUX 
-## SET UP LINUX VÀ AUDIT
-### CHECK KERNEL 
+#LINUX 
+##SET UP LINUX VÀ AUDIT
+###CHECK KERNEL 
 ```
 uname -a
 ```
