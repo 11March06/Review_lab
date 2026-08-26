@@ -141,6 +141,15 @@ cat /etc/hostname
 `cat /etc/hostname`
 <img width="2048" height="490" alt="image" src="https://github.com/user-attachments/assets/7cdbc4f2-55db-4bc7-9d45-11ea6ea5d863" />
 
+## Đặt câu hỏi : Tại sao một lệnh `whoami` lại sinh ra nhiều dòng log?
+- Chạy `whoami` và audit log tạo ra : `PROCTITLE`, `PATH`, `PATH`, `CWD`, `EXECVE`, `SYSCALL`
+- Tất cả có cùng `msg=audit(...:149)`: Số `149` là serial/event ID
+--> Nghĩa là đây không phải 6 sự kiện khác nhau mà là:
+<img width="502" height="416" alt="image" src="https://github.com/user-attachments/assets/9f981c77-7fe6-499c-8f40-fe5aa0da91f9" />
+--> Audit subsystem thường ghi nhiều record để mô tả đầy đủ một hành động.
+
+
+
 ## 1. Theo dõi `execve`
 - Đây là bước quan trọng nhất :
 - Mục tiêu : ```User chạy một chương trình --> Kernel tạo audit event --> `auditd` ghi lại --> `EXECVE` cho ta thấy command arguments```
@@ -180,3 +189,50 @@ Tương tự với `cat /etc/hostname`:
 
 ## 2. Theo dõi SYSCALL
 
+- Định nghĩa : System call (syscall) là cơ chế để chương trình ở userspace yêu cầu kernel thực hiện một thao tác.
+- Ví dụ : Userspace : `execve("/usr/bin/ls")` --> Kernel và khi đó Kernel sẽ thực thi process và trả về cho Userspace
+- Các syscall phổ biến:
+    - execve      → thực thi chương trình
+    - openat      → mở file
+    - read        → đọc dữ liệu
+    - write       → ghi dữ liệu
+    - unlink      → xóa file
+    - connect     → kết nối network
+    - setuid      → thay đổi UID
+
+- Theo trong log: 
+```
+type=SYSCALL
+arch=x86_64
+syscall=execve
+success=yes
+exit=0
+```
+- Ý nghĩa :
+    - `type=SYSCALL` : là record chính mô tả syscall
+    - `arch=x86_64` : syscall được thực hiện theo ABI/kiến trúc 64-bit
+    - `syscall=execve` : process gọi syscall `execve()`
+    - `sucess=yes` và `exit=0` : Kernel xử lý thành công
+ 
+
+- Thực chất `execve()` làm gì? Khi gõ `whoami`. Shell không trực tiếp biến thành `whoami`. Quá trình cơ bản là :
+```
+bash --> Tạo child process --> Child process --> execve(...) --> /usr/bin/whoami
+```
+--> execve() là syscall dùng để nạp một chương trình mới vào process hiện tại. Cụ thể hơn, nó có dạng khái niệm: 
+    ```
+    execve(
+        pathname,
+        argv,
+        envp
+    )
+    ```
+    Ví dụ : 
+    ```
+    pathname:
+    /usr/bin/ls
+    argv:
+    argv[0] = "ls"
+    argv[1] = "--color=auto"
+    argv[2] = "/tmp"
+    ```
