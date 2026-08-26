@@ -98,3 +98,22 @@ Nó có nghĩa :
 ``` User ban đầu : UID 1000 --> Sudo --> Quyền thực thi : UID 0 (root)```
 --> 
 `auid=1000` giúp auditd giữ lại danh tính của người dùng ban đầu, ngay cả khi process đã được nâng quyền lên `root`.
+
+
+## 1. Theo dõi `execve`
+- Đây là bước quan trọng nhất :
+- Mục tiêu : ```User chạy một chương trình --> Kernel tạo audit event --> `auditd` ghi lại --> `EXECVE` cho ta thấy command arguments```
+- Test rule :
+```
+sudo auditctl -l
+```
+<img width="688" height="108" alt="image" src="https://github.com/user-attachments/assets/d85e6bb1-8e7f-4a4f-bd3c-000a8778ee66" />
+--> Hiện tại chưa có rule
+
+Nạp thử 1 rule
+```
+sudo auditctl -a always,exit -F arch=b64 -S execve -k exec_log
+sudo auditctl -l
+```
+<img width="1526" height="122" alt="image" src="https://github.com/user-attachments/assets/b2eafcde-5b1f-47ca-952f-1c9bccef90c1" />
+
