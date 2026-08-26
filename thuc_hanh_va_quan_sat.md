@@ -6,20 +6,24 @@ uname -a
 ```
 <img width="1438" height="124" alt="image" src="https://github.com/user-attachments/assets/b339dbf0-d61d-43a7-a9fa-3ff4f1dc1dcf" />
 ### SETUP AUDIT
+
 Cài đặt Audit
 ```
 sudo apt update
 sudo apt install auditd audispd-plugins -y
 ```
+
 Kiểm tra trạng thái hoạt động (status)
 ```
 sudo systemctl status auditd
 ```
 <img width="1456" height="422" alt="image" src="https://github.com/user-attachments/assets/8b03b484-91fb-4c60-bb83-a39f3ad0cdef" />
+
 Nếu inactive, try:
 ```
 sudo systemctl start auditd
 ```
+
 Kiểm tra log
 ```
 sudo ls -l /var/log/audit/
@@ -38,8 +42,9 @@ Phân tích ví dụ 2 dòng log trên
     ```
     type=USER_CMD msg=audit(1787727563.041:83): pid=4621 uid=1000 auid=1000 ses=3 subj=unconfined msg='cwd="/home/ubuntusiem" cmd=6C73202D6C202F7661722F6C6F672F61756469742F terminal=pts/0 res=success'
     ```
-- Ý nghĩa : 
-    | Trường                   | Giá trị            | Ý nghĩa                                                     |
+- Ý nghĩa :
+
+| Trường                   | Giá trị            | Ý nghĩa                                                     |
 | ------------------------ | ------------------ | ----------------------------------------------------------- |
 | `type=USER_CMD`          | `USER_CMD`         | Ghi nhận command do user thực hiện                          |
 | `pid=4621`               | `4621`             | Process ID của tiến trình thực hiện lệnh                    |
