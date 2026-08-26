@@ -99,10 +99,7 @@ Nó có nghĩa :
 --> 
 `auid=1000` giúp auditd giữ lại danh tính của người dùng ban đầu, ngay cả khi process đã được nâng quyền lên `root`.
 
-
-## 1. Theo dõi `execve`
-- Đây là bước quan trọng nhất :
-- Mục tiêu : ```User chạy một chương trình --> Kernel tạo audit event --> `auditd` ghi lại --> `EXECVE` cho ta thấy command arguments```
+## RULE
 - Test rule :
 ```
 sudo auditctl -l
@@ -117,7 +114,7 @@ sudo auditctl -l
 ```
 <img width="1526" height="122" alt="image" src="https://github.com/user-attachments/assets/b2eafcde-5b1f-47ca-952f-1c9bccef90c1" />
 
-Tạo event
+## Tạo event
 ```
 whoami
 id
@@ -129,15 +126,6 @@ ls /tmp
 cat /etc/hostname
 ```
 <img width="1504" height="708" alt="image" src="https://github.com/user-attachments/assets/a6cfc3d8-87cb-4ccd-aef6-94fb510a547a" />
-
-- Tìm các event mà rule `exec_log` bắt được:
-```
-sudo ausearch -k exec_log -i
-```
-Để chỉ xem phần command arguments: 
-```
-sudo ausearch -k exec_log -m EXECVE -i
-```
 
 - Cụ thể log sau những lệnh vừa rồi:
 
@@ -153,7 +141,42 @@ sudo ausearch -k exec_log -m EXECVE -i
 `cat /etc/hostname`
 <img width="2048" height="490" alt="image" src="https://github.com/user-attachments/assets/7cdbc4f2-55db-4bc7-9d45-11ea6ea5d863" />
 
+## 1. Theo dõi `execve`
+- Đây là bước quan trọng nhất :
+- Mục tiêu : ```User chạy một chương trình --> Kernel tạo audit event --> `auditd` ghi lại --> `EXECVE` cho ta thấy command arguments```
+
+- Tìm các event mà rule `exec_log` bắt được:
+```
+sudo ausearch -k exec_log -i
+```
+Để chỉ xem phần command arguments: 
+```
+sudo ausearch -k exec_log -m EXECVE -i
+```
 
 
 
-  
+
+- Xét `EXECVE` 
+```
+type=EXECVE msg=audit(08/26/2026 00:34:21.861:149) : argc=1 a0=whoami
+```
+`argc` = số lượng argument `argc=1` : nghĩa là command có 1 argument: `a0=whoami`.
+
+Với : `ls --color=auto /tmp` --> audit ghi: 
+```
+type=EXECVE msg=audit(08/26/2026 00:34:35.513:151) : argc=3 a0=ls a1=--color=auto a2=/tmp
+```
+Có `argc=3`, `a0=1s`, `a1=--color=auto`, `a2=/tmp`. Tức là:
+    - a0 --> Chương trình
+    - a1 --> argument thứ nhất
+    - a2 --> argument thứ hai
+    ...
+
+Tương tự với `cat /etc/hostname`:
+--> `argc=2`, `a0=cat`, `a1=/etc/hostname` 
+
+- Mục đích của `EXECVE` : biết được `User đã thực thi gì?`
+
+## 2. Theo dõi SYSCALL
+
