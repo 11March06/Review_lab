@@ -36,7 +36,7 @@ Có thể hiểu đơn giản:
 
 > Audit Policy quyết định Windows cần "quan sát" loại hoạt động nào và khi nào thì ghi log.
 
-Ví dụ bạn muốn Windows ghi lại:
+Ví dụ Windows ghi lại:
 - User đăng nhập
 - User đăng xuất
 - Process được tạo
@@ -45,7 +45,7 @@ Ví dụ bạn muốn Windows ghi lại:
 - Service được cài đặt
 - Audit policy bị thay đổi
 
-Bạn phải enable audit policy tương ứng.
+--> Phải enable audit policy tương ứng.
 
 Ví dụ: **Audit Process Creation** được bật:
 ```
@@ -91,20 +91,20 @@ Detailed Tracking
     └── Audit Process Creation
 ```
 
-Bạn có thể chọn: **Success** / **Failure**
+-> Có thể chọn: **Success** / **Failure**
 
 Microsoft cũng hỗ trợ cấu hình qua Local Security Policy/Group Policy.
 
 ### Cách 2 — auditpol
 
-Đây là thứ tương đương gần nhất với việc bạn dùng `auditctl` trên Linux.
+Đây là thứ tương đương gần nhất với việc dùng `auditctl` trên Linux.
 
 Kiểm tra audit policy hiện tại:
 ```
 auditpol /get /category:*
 ```
 
-Bạn sẽ thấy kiểu:
+Sẽ có kiểu:
 ```
 System audit policy
 Category/Subcategory                      Setting
@@ -152,21 +152,22 @@ Windows không đơn giản là `auditctl → auditpol` mà kiến trúc và lo�
 
 ## 4. Quan trọng nhất: Windows không phải cứ bật Audit Policy là log vào một file text
 
-Linux của bạn có: `/var/log/audit/audit.log`
+Linux có: `/var/log/audit/audit.log`
 
 Windows chủ yếu sử dụng Windows Event Log, trong đó Security log nằm tại:
+
 ```
 C:\Windows\System32\winevt\Logs\Security.evtx
 ```
 
-Bạn có thể xem bằng **Event Viewer**. Mở: `eventvwr.msc`, sau đó:
+Có thể xem bằng **Event Viewer**. Mở: `eventvwr.msc`, sau đó:
 ```
 Windows Logs
     ↓
 Security
 ```
 
-Đây là nơi bạn sẽ thực hành quan sát.
+Đây là nơi sẽ thực hành quan sát.
 
 ## 5. Event ID là gì?
 
@@ -196,7 +197,7 @@ Do đó có thể nhớ: Linux dùng **record type**, Windows dùng **Event ID**
 
 ## 6. Tương ứng với execve của Linux
 
-Trong Linux bạn có:
+Trong Linux có:
 ```
 -a always,exit -F arch=b64 -S execve -k exec_log
 ```
@@ -256,7 +257,7 @@ Include command line in process creation events
 4688 có thông tin command line hữu ích hơn
 ```
 
-Đây khá giống vấn đề bạn vừa gặp khi học EXECVE: phải phân biệt "event được tạo" với "event chứa những field nào".
+Đây khá giống vấn đề vừa gặp khi học EXECVE: phải phân biệt "event được tạo" với "event chứa những field nào".
 
 ## 8. Authentication trên Windows
 
@@ -300,7 +301,7 @@ Workstation Name: ...
 Source Network Address: ...
 ```
 
-Bạn có thể điều tra:
+Có thể điều tra:
 - Ai? → Account Name
 - Đăng nhập thành công? → 4624
 - Kiểu đăng nhập? → Logon Type
@@ -314,7 +315,7 @@ Bật **Audit Logon** với **Success and Failure**. Sau đó nhập sai passwor
 
 Windows có thể sinh **Event ID 4625**.
 
-Từ đó bạn có thể quan sát:
+Từ đó có thể quan sát:
 - Account Name
 - Failure Reason
 - Logon Type
@@ -364,14 +365,14 @@ Windows Service
 
 Ví dụ: `net stop spooler` hoặc `sc stop spooler`
 
-Bạn có thể quan sát Windows Event Log của **Service Control Manager**.
+Có thể quan sát Windows Event Log của **Service Control Manager**.
 
 Ví dụ **Event ID 7036** thường biểu diễn service đã chuyển trạng thái, ví dụ:
 ```
 The Print Spooler service entered the stopped state.
 ```
 
-Điểm này cần phân biệt với Security Audit Policy: không phải mọi service state event đều là Security audit event. Bạn có thể phải quan sát thêm log System của Windows.
+Điểm này cần phân biệt với Security Audit Policy: không phải mọi service state event đều là Security audit event. Có thể phải quan sát thêm log System của Windows.
 
 ## 13. Vì vậy Windows cũng nên quan sát nhiều nguồn
 
@@ -391,7 +392,7 @@ Windows có: **Security** + **System** + **Application**
 
 ## 14. Cấu hình thu log trên Windows — nhìn tổng thể
 
-Bạn có thể nhớ sơ đồ này:
+Có thể nhớ sơ đồ này:
 
 ```
                     WINDOWS
@@ -425,7 +426,7 @@ Bạn có thể nhớ sơ đồ này:
 
 ## 15. Cách xem cấu hình hiện tại
 
-Trên Windows VM mở CMD với quyền Administrator:
+Trên Windows mở CMD với quyền Administrator:
 ```
 auditpol /get /category:*
 ```
@@ -442,7 +443,7 @@ Authentication:
 auditpol /get /subcategory:"Logon"
 ```
 
-Bạn sẽ biết ngay:
+Sẽ biết ngay:
 ```
 Process Creation      Success
 Logon                  Success and Failure
@@ -519,9 +520,9 @@ Sau đó: `Win + L` đăng nhập lại.
 
 Vào Event Viewer → Windows Logs → Security → Tìm: **4624**
 
-## 19. Tư duy giống bài Linux của bạn
+## 19. Tư duy giống bài Linux
 
-Bạn đang học Linux theo:
+Linux theo:
 ```
 Rule
  ↓
@@ -575,7 +576,7 @@ Event ID 4688
 Event Viewer
 ```
 
-## 20. Bảng đối chiếu để bạn học
+## 20. Bảng đối chiếu 
 
 | Linux auditd | Windows Audit |
 |---|---|
@@ -597,7 +598,7 @@ Event Viewer
 
 # 5 Trọng Tâm Khi Thực Hành Quan Sát Windows Audit Log
 
-Nếu mentor yêu cầu "quan sát cách Windows audit thu log", nên đi theo đúng khung tư duy đã học từ Linux, tập trung vào 5 thứ sau:
+Tập trung vào 5 thứ sau:
 
 ## 1. Process Creation
 
