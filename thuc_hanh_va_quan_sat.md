@@ -150,89 +150,563 @@ cat /etc/hostname
 
 
 
-## 1. Theo dõi `execve`
-- Đây là bước quan trọng nhất :
-- Mục tiêu : ```User chạy một chương trình --> Kernel tạo audit event --> `auditd` ghi lại --> `EXECVE` cho ta thấy command arguments```
+# Auditd Linux — Theo dõi `execve` và `SYSCALL`
 
-- Tìm các event mà rule `exec_log` bắt được:
+## 1. Theo dõi `execve`
+
+### 1.1. Mục tiêu
+
+Đây là bước quan trọng nhất trong phần thực hành `auditd`.
+
+Mục tiêu là quan sát quá trình:
+
+```text
+User chạy một chương trình
+        ↓
+Shell tạo/thực thi process
+        ↓
+Process gọi syscall execve()
+        ↓
+Kernel Audit Subsystem phát hiện syscall
+        ↓
+Tạo Audit Event
+        ↓
+auditd nhận và ghi event
+        ↓
+/var/log/audit/audit.log
+        ↓
+ausearch dùng để truy vấn
 ```
+
+Điểm quan trọng nhất của `execve` là record `EXECVE` giúp ta biết **chương trình nào được thực thi và các argument được truyền vào chương trình đó**.
+
+---
+
+### 1.2. Nạp rule theo dõi `execve`
+
+Rule:
+
+```bash
+sudo auditctl -a always,exit -F arch=b64 -S execve -k exec_log
+```
+
+Ý nghĩa:
+
+- `-a always,exit`: tạo audit event khi syscall kết thúc.
+- `-F arch=b64`: áp dụng cho kiến trúc 64-bit.
+- `-S execve`: theo dõi syscall `execve`.
+- `-k exec_log`: gắn nhãn `exec_log` cho các event khớp rule.
+
+Kiểm tra rule đã được nạp:
+
+```bash
+sudo auditctl -l
+```
+
+Có thể thấy:
+
+```text
+-a always,exit -F arch=b64 -S execve -F key=exec_log
+```
+
+---
+
+### 1.3. Tạo một số event
+
+Chạy một vài command:
+
+```bash
+whoami
+id
+ls --color=auto /tmp
+cat /etc/hostname
+```
+
+Mỗi khi một chương trình được thực thi, syscall `execve()` có thể tạo ra một audit event tương ứng.
+
+---
+
+### 1.4. Xem các event mà rule `exec_log` bắt được
+
+Xem toàn bộ record thuộc key:
+
+```bash
 sudo ausearch -k exec_log -i
 ```
-Để chỉ xem phần command arguments: 
-```
+
+Nếu chỉ muốn xem record `EXECVE`:
+
+```bash
 sudo ausearch -k exec_log -m EXECVE -i
 ```
 
+Trong đó:
 
+- `-k exec_log`: chỉ lấy event có key `exec_log`.
+- `-m EXECVE`: chỉ lấy record có type `EXECVE`.
+- `-i`: `interpret`, giúp `ausearch` diễn giải một số giá trị sang dạng dễ đọc hơn.
 
+---
 
-- Xét `EXECVE` 
+### 1.5. Phân tích `EXECVE`
+
+Ví dụ với:
+
+```bash
+whoami
 ```
+
+Audit ghi:
+
+```text
 type=EXECVE msg=audit(08/26/2026 00:34:21.861:149) : argc=1 a0=whoami
 ```
-`argc` = số lượng argument `argc=1` : nghĩa là command có 1 argument: `a0=whoami`.
 
-Với : `ls --color=auto /tmp` --> audit ghi: 
+Trong đó:
+
+- `type=EXECVE`: đây là audit record chứa thông tin về các argument của lời gọi `execve()`.
+- `argc=1`: có 1 phần tử trong argument vector (`argv`).
+- `a0=whoami`: argument đầu tiên.
+
+Có thể hình dung:
+
+```text
+argv[0] = "whoami"
 ```
+
+> **Lưu ý:** `argc` là số lượng phần tử trong `argv`, không nên hiểu đơn giản là "số lượng tham số sau tên command".
+
+---
+
+### 1.6. Ví dụ với `ls --color=auto /tmp`
+
+Command:
+
+```bash
+ls --color=auto /tmp
+```
+
+Audit ghi:
+
+```text
 type=EXECVE msg=audit(08/26/2026 00:34:35.513:151) : argc=3 a0=ls a1=--color=auto a2=/tmp
 ```
-Có `argc=3`, `a0=1s`, `a1=--color=auto`, `a2=/tmp`. Tức là:
-    - a0 --> Chương trình
-    - a1 --> argument thứ nhất
-    - a2 --> argument thứ hai
-    ...
 
-Tương tự với `cat /etc/hostname`:
---> `argc=2`, `a0=cat`, `a1=/etc/hostname` 
+Ta có:
 
-- Mục đích của `EXECVE` : biết được `User đã thực thi gì?`
+```text
+argc=3
 
-## 2. Theo dõi SYSCALL
-
-- Định nghĩa : System call (syscall) là cơ chế để chương trình ở userspace yêu cầu kernel thực hiện một thao tác.
-- Ví dụ : Userspace : `execve("/usr/bin/ls")` --> Kernel và khi đó Kernel sẽ thực thi process và trả về cho Userspace
-- Các syscall phổ biến:
-    - execve      → thực thi chương trình
-    - openat      → mở file
-    - read        → đọc dữ liệu
-    - write       → ghi dữ liệu
-    - unlink      → xóa file
-    - connect     → kết nối network
-    - setuid      → thay đổi UID
-
-- Theo trong log: 
+a0 = ls
+a1 = --color=auto
+a2 = /tmp
 ```
+
+Có thể biểu diễn dưới dạng `argv`:
+
+```text
+argv[0] = "ls"
+argv[1] = "--color=auto"
+argv[2] = "/tmp"
+```
+
+Trong đó:
+
+- `a0`: phần tử đầu tiên của `argv`, thường chứa tên chương trình.
+- `a1`: argument thứ nhất sau `a0`.
+- `a2`: argument thứ hai sau `a0`.
+- ...
+- `argc`: tổng số phần tử trong `argv`.
+
+Vì vậy:
+
+```text
+a0 → tên chương trình / argv[0]
+a1 → argument thứ nhất
+a2 → argument thứ hai
+...
+```
+
+---
+
+### 1.7. Ví dụ với `cat /etc/hostname`
+
+Command:
+
+```bash
+cat /etc/hostname
+```
+
+Audit ghi:
+
+```text
+type=EXECVE msg=audit(08/26/2026 00:36:33.948:152) : argc=2 a0=cat a1=/etc/hostname
+```
+
+Tương ứng:
+
+```text
+argc=2
+
+argv[0] = "cat"
+argv[1] = "/etc/hostname"
+```
+
+Như vậy có thể khôi phục command:
+
+```bash
+cat /etc/hostname
+```
+
+---
+
+### 1.8. `EXECVE` cho biết điều gì?
+
+Có thể nhớ đơn giản:
+
+```text
+EXECVE
+   ↓
+User/process đã thực thi chương trình gì?
+   ↓
+Các argument được truyền vào là gì?
+```
+
+Ví dụ:
+
+```text
+EXECVE
+argc=3
+a0=ls
+a1=--color=auto
+a2=/tmp
+```
+
+cho biết process đã thực thi:
+
+```bash
+ls --color=auto /tmp
+```
+
+Đây là lý do `execve` rất quan trọng trong **Linux auditing, SIEM và forensic**: nó giúp phát hiện và truy vết việc thực thi command.
+
+---
+
+## 2. Theo dõi `SYSCALL`
+
+### 2.1. `syscall` là gì?
+
+**System call (syscall)** là cơ chế để chương trình ở **userspace** yêu cầu **kernel** thực hiện một thao tác mà chương trình không thể hoặc không nên thực hiện trực tiếp.
+
+Có thể hình dung:
+
+```text
+Userspace
+   │
+   │ System Call
+   ▼
+Kernel
+   │
+   │ thực hiện thao tác
+   ▼
+Kết quả trả về Userspace
+```
+
+Ví dụ:
+
+```text
+Userspace
+    │
+    │ execve("/usr/bin/ls", ...)
+    ▼
+  Kernel
+    │
+    │ thực hiện việc nạp chương trình
+    ▼
+  /usr/bin/ls được thực thi
+```
+
+---
+
+### 2.2. Một số syscall phổ biến
+
+| Syscall | Chức năng |
+|---|---|
+| `execve` | Thực thi một chương trình |
+| `openat` | Mở/truy cập một file |
+| `read` | Đọc dữ liệu |
+| `write` | Ghi dữ liệu |
+| `unlink` | Xóa một file |
+| `connect` | Thiết lập kết nối mạng |
+| `setuid` | Thay đổi User ID |
+
+Auditd có thể tạo rule để theo dõi từng syscall cụ thể.
+
+Ví dụ:
+
+```bash
+sudo auditctl -a always,exit -F arch=b64 -S connect -k network_connect
+```
+
+Rule trên yêu cầu audit theo dõi syscall `connect`.
+
+---
+
+### 2.3. `SYSCALL` trong audit log
+
+Trong log:
+
+```text
 type=SYSCALL
 arch=x86_64
 syscall=execve
 success=yes
 exit=0
 ```
-- Ý nghĩa :
-    - `type=SYSCALL` : là record chính mô tả syscall
-    - `arch=x86_64` : syscall được thực hiện theo ABI/kiến trúc 64-bit
-    - `syscall=execve` : process gọi syscall `execve()`
-    - `sucess=yes` và `exit=0` : Kernel xử lý thành công
- 
 
-- Thực chất `execve()` làm gì? Khi gõ `whoami`. Shell không trực tiếp biến thành `whoami`. Quá trình cơ bản là :
+Ý nghĩa:
+
+- `type=SYSCALL`: đây là audit record mô tả một syscall.
+- `arch=x86_64`: syscall được thực hiện theo kiến trúc/ABI 64-bit.
+- `syscall=execve`: process đã gọi syscall `execve`.
+- `success=yes`: syscall thực hiện thành công.
+- `exit=0`: giá trị trả về của syscall là `0`, trong trường hợp này biểu thị thành công.
+
+Ví dụ đầy đủ:
+
+```text
+type=SYSCALL
+arch=x86_64
+syscall=execve
+success=yes
+exit=0
+pid=4892
+ppid=2357
+auid=ubuntusiem
+uid=ubuntusiem
+gid=ubuntusiem
+tty=pts0
+ses=3
+comm=ls
+exe=/usr/bin/ls
+key=exec_log
 ```
-bash --> Tạo child process --> Child process --> execve(...) --> /usr/bin/whoami
+
+Một số trường quan trọng:
+
+| Trường | Ý nghĩa |
+|---|---|
+| `type=SYSCALL` | Record mô tả syscall |
+| `arch=x86_64` | Kiến trúc/ABI của syscall |
+| `syscall=execve` | Syscall được gọi |
+| `success=yes` | Syscall thành công |
+| `exit=0` | Giá trị trả về của syscall |
+| `pid=4892` | Process thực hiện syscall |
+| `ppid=2357` | Process cha |
+| `auid=ubuntusiem` | Audit User ID của session |
+| `uid=ubuntusiem` | UID hiện tại của process |
+| `tty=pts0` | Terminal mà process gắn vào |
+| `ses=3` | Audit session ID |
+| `comm=ls` | Tên process |
+| `exe=/usr/bin/ls` | Executable thực tế |
+| `key=exec_log` | Key của audit rule đã match |
+
+---
+
+### 2.4. `execve` và `SYSCALL` có phải là hai thứ khác nhau không?
+
+Cần phân biệt:
+
+```text
+execve
+    ↓
+là một SYSTEM CALL
+
+SYSCALL
+    ↓
+là một LOẠI AUDIT RECORD dùng để mô tả syscall
 ```
---> execve() là syscall dùng để nạp một chương trình mới vào process hiện tại. Cụ thể hơn, nó có dạng khái niệm: 
-    ```
-    execve(
-        pathname,
-        argv,
-        envp
-    )
-    ```
-    Ví dụ : 
-    ```
-    pathname:
+
+Ví dụ:
+
+```text
+type=SYSCALL
+syscall=execve
+```
+
+có nghĩa:
+
+> Audit record loại `SYSCALL` đang mô tả việc process gọi syscall `execve()`.
+
+Trong cùng một audit event, có thể xuất hiện nhiều record:
+
+```text
+type=SYSCALL
+type=EXECVE
+type=PATH
+type=CWD
+type=PROCTITLE
+```
+
+Chúng bổ sung thông tin cho nhau.
+
+---
+
+### 2.5. `execve()` thực chất làm gì?
+
+Khi bạn gõ:
+
+```bash
+whoami
+```
+
+Shell không tự biến thành chương trình `/usr/bin/whoami`.
+
+Quá trình đơn giản hóa:
+
+```text
+bash
+ │
+ │ tạo/chuẩn bị process
+ ▼
+process
+ │
+ │ execve(...)
+ ▼
+/usr/bin/whoami
+```
+
+`execve()` thay thế **program image** hiện tại của process bằng program image mới.
+
+Điều này rất quan trọng:
+
+> `execve()` không tạo ra một process mới theo nghĩa trực tiếp. Thông thường shell có thể tạo child process trước, sau đó child gọi `execve()` để biến mình thành chương trình cần chạy.
+
+Ví dụ:
+
+```text
+bash
+ │
+ │ fork()
+ ▼
+child process
+ │
+ │ execve("/usr/bin/whoami", ...)
+ ▼
+/usr/bin/whoami
+```
+
+---
+
+### 2.6. Dạng khái niệm của `execve()`
+
+Có thể hình dung syscall:
+
+```c
+execve(
+    pathname,
+    argv,
+    envp
+);
+```
+
+Trong đó:
+
+- `pathname`: đường dẫn executable cần chạy.
+- `argv`: mảng các argument truyền cho chương trình.
+- `envp`: mảng các biến môi trường truyền cho chương trình.
+
+Ví dụ command:
+
+```bash
+ls --color=auto /tmp
+```
+
+có thể tương ứng về mặt khái niệm với:
+
+```text
+pathname:
     /usr/bin/ls
-    argv:
+
+argv:
     argv[0] = "ls"
     argv[1] = "--color=auto"
     argv[2] = "/tmp"
-    ```
+```
+
+và:
+
+```text
+argc = 3
+```
+
+Trong audit record `EXECVE`, các phần tử `argv` này được thể hiện dưới dạng:
+
+```text
+argc=3
+a0=ls
+a1=--color=auto
+a2=/tmp
+```
+
+---
+
+### 2.7. Mối quan hệ giữa `SYSCALL` và `EXECVE`
+
+Có thể nhớ bằng bảng sau:
+
+| Record | Cho biết |
+|---|---|
+| `SYSCALL` | Process gọi syscall nào, thành công/thất bại, PID, UID, executable... |
+| `EXECVE` | Các argument được truyền vào `execve()` |
+| `PATH` | Filesystem object liên quan đến event |
+| `CWD` | Current Working Directory của process |
+| `PROCTITLE` | Command/process title được audit ghi nhận |
+
+Ví dụ:
+
+```text
+type=SYSCALL
+syscall=execve
+pid=4892
+uid=ubuntusiem
+auid=ubuntusiem
+exe=/usr/bin/ls
+key=exec_log
+
+type=EXECVE
+argc=3
+a0=ls
+a1=--color=auto
+a2=/tmp
+
+type=CWD
+cwd=/home/ubuntusiem
+
+type=PATH
+name=/usr/bin/ls
+```
+
+Ghép các record lại, ta có thể hiểu:
+
+```text
+User/session: ubuntusiem
+        ↓
+Process: PID 4892
+        ↓
+Thực thi executable: /usr/bin/ls
+        ↓
+Command:
+    ls --color=auto /tmp
+        ↓
+Working directory:
+/home/ubuntusiem
+        ↓
+Syscall:
+    execve
+        ↓
+Kết quả:
+    success=yes
+```
+
+> **Đây mới là cách đọc auditd đúng:** không nên nhìn riêng `EXECVE` hoặc `SYSCALL`, mà ghép các record có cùng `msg=audit(...:serial)` để tái dựng **một audit event hoàn chỉnh**.
