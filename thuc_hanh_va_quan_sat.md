@@ -6,12 +6,12 @@ uname -a
 ```
 <img width="1438" height="124" alt="image" src="https://github.com/user-attachments/assets/b339dbf0-d61d-43a7-a9fa-3ff4f1dc1dcf" />
 ### SETUP AUDIT
-* Cài đặt Audit
+Cài đặt Audit
 ```
 sudo apt update
 sudo apt install auditd audispd-plugins -y
 ```
-* Kiểm tra trạng thái hoạt động (status)
+Kiểm tra trạng thái hoạt động (status)
 ```
 sudo systemctl status auditd
 ```
@@ -20,25 +20,25 @@ Nếu inactive, try:
 ```
 sudo systemctl start auditd
 ```
-* Kiểm tra log
+Kiểm tra log
 ```
 sudo ls -l /var/log/audit/
 ```
 <img width="912" height="118" alt="image" src="https://github.com/user-attachments/assets/7ade1ac6-ce54-40dc-8814-d9db101922d3" />
 Thông thường sẽ có : `audit.log`
 
-* Thử một vài dòng autit log
+Thử một vài dòng autit log
 ```
 sudo tail -20 /var/log/audit/audit.log
 ```
 <img width="1962" height="332" alt="image" src="https://github.com/user-attachments/assets/ce3bbe6d-ea2f-4401-b5b3-d9922d6233ce" />
 
-* Phân tích ví dụ 2 dòng log trên
-  * Dòng `USER_CMD`
+Phân tích ví dụ 2 dòng log trên
+- Dòng `USER_CMD`
     ```
     type=USER_CMD msg=audit(1787727563.041:83): pid=4621 uid=1000 auid=1000 ses=3 subj=unconfined msg='cwd="/home/ubuntusiem" cmd=6C73202D6C202F7661722F6C6F672F61756469742F terminal=pts/0 res=success'
     ```
-    Ý nghĩa : 
+- Ý nghĩa : 
     | Trường                   | Giá trị            | Ý nghĩa                                                     |
 | ------------------------ | ------------------ | ----------------------------------------------------------- |
 | `type=USER_CMD`          | `USER_CMD`         | Ghi nhận command do user thực hiện                          |
@@ -50,11 +50,11 @@ sudo tail -20 /var/log/audit/audit.log
 | `cwd="/home/ubuntusiem"` | `/home/ubuntusiem` | Thư mục hiện tại khi command được thực hiện                 |
 | `terminal=pts/0`         | `pts/0`            | Command được thực hiện từ terminal                          |
 | `res=success`            | `success`          | Command được thực hiện thành công                           |
-    Giải mã trường `cmd`
-- Auditd lưu command ở dạng hexadecimal:
+- Giải mã trường `cmd`
+  - Auditd lưu command ở dạng hexadecimal:
 `6C73202D6C202F7661722F6C6F672F61756469742F`
-- Giải mã hexadecimal → ASCII:
+  - Giải mã hexadecimal → ASCII:
 `ls -l /var/log/audit/`
-- Tức là user đã thực hiện:
+  - Tức là user đã thực hiện:
 `ls -l /var/log/audit/`
 --> Đây là lệnh dùng để liệt kê các file trong thư mục /var/log/audit/. 
