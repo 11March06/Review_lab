@@ -154,101 +154,7 @@ cat /etc/hostname
 
 ## 1. Theo dõi `execve`
 
-### 1.1. Mục tiêu
-
-Đây là bước quan trọng nhất trong phần thực hành `auditd`.
-
-Mục tiêu là quan sát quá trình:
-
-```text
-User chạy một chương trình
-        ↓
-Shell tạo/thực thi process
-        ↓
-Process gọi syscall execve()
-        ↓
-Kernel Audit Subsystem phát hiện syscall
-        ↓
-Tạo Audit Event
-        ↓
-auditd nhận và ghi event
-        ↓
-/var/log/audit/audit.log
-        ↓
-ausearch dùng để truy vấn
-```
-
-Điểm quan trọng nhất của `execve` là record `EXECVE` giúp ta biết **chương trình nào được thực thi và các argument được truyền vào chương trình đó**.
-
----
-
-### 1.2. Nạp rule theo dõi `execve`
-
-Rule:
-
-```bash
-sudo auditctl -a always,exit -F arch=b64 -S execve -k exec_log
-```
-
-Ý nghĩa:
-
-- `-a always,exit`: tạo audit event khi syscall kết thúc.
-- `-F arch=b64`: áp dụng cho kiến trúc 64-bit.
-- `-S execve`: theo dõi syscall `execve`.
-- `-k exec_log`: gắn nhãn `exec_log` cho các event khớp rule.
-
-Kiểm tra rule đã được nạp:
-
-```bash
-sudo auditctl -l
-```
-
-Có thể thấy:
-
-```text
--a always,exit -F arch=b64 -S execve -F key=exec_log
-```
-
----
-
-### 1.3. Tạo một số event
-
-Chạy một vài command:
-
-```bash
-whoami
-id
-ls --color=auto /tmp
-cat /etc/hostname
-```
-
-Mỗi khi một chương trình được thực thi, syscall `execve()` có thể tạo ra một audit event tương ứng.
-
----
-
-### 1.4. Xem các event mà rule `exec_log` bắt được
-
-Xem toàn bộ record thuộc key:
-
-```bash
-sudo ausearch -k exec_log -i
-```
-
-Nếu chỉ muốn xem record `EXECVE`:
-
-```bash
-sudo ausearch -k exec_log -m EXECVE -i
-```
-
-Trong đó:
-
-- `-k exec_log`: chỉ lấy event có key `exec_log`.
-- `-m EXECVE`: chỉ lấy record có type `EXECVE`.
-- `-i`: `interpret`, giúp `ausearch` diễn giải một số giá trị sang dạng dễ đọc hơn.
-
----
-
-### 1.5. Phân tích `EXECVE`
+### 1.1. Phân tích `EXECVE`
 
 Ví dụ với:
 
@@ -278,7 +184,7 @@ argv[0] = "whoami"
 
 ---
 
-### 1.6. Ví dụ với `ls --color=auto /tmp`
+### 1.2. Ví dụ với `ls --color=auto /tmp`
 
 Command:
 
@@ -329,7 +235,7 @@ a2 → argument thứ hai
 
 ---
 
-### 1.7. Ví dụ với `cat /etc/hostname`
+### 1.3. Ví dụ với `cat /etc/hostname`
 
 Command:
 
@@ -360,7 +266,7 @@ cat /etc/hostname
 
 ---
 
-### 1.8. `EXECVE` cho biết điều gì?
+### 1.4. `EXECVE` cho biết điều gì?
 
 Có thể nhớ đơn giản:
 
@@ -710,3 +616,966 @@ Kết quả:
 ```
 
 > **Đây mới là cách đọc auditd đúng:** không nên nhìn riêng `EXECVE` hoặc `SYSCALL`, mà ghép các record có cùng `msg=audit(...:serial)` để tái dựng **một audit event hoàn chỉnh**.
+
+## 3. Theo dõi `PATH` và file system object
+
+### 3.1. `PATH` là gì?
+
+Trong auditd, `PATH` là một **loại audit record** dùng để mô tả filesystem object (file/directory) có liên quan đến một audit event.
+
+Ví dụ:
+
+```text
+type=PATH
+item=0
+name=/etc/passwd
+inode=123456
+dev=08:05
+mode=file,644
+ouid=root
+ogid=root
+nametype=NORMAL
+```
+
+Record `PATH` giúp trả lời:
+
+> **"File hoặc filesystem object nào có liên quan đến hành động mà auditd vừa ghi nhận?"**
+
+Cần phân biệt:
+
+```text
+PATH record
+    ↓
+Thông tin về file/object trong audit event
+
+PATH rule / watch rule
+    ↓
+Rule yêu cầu audit theo dõi một file/object cụ thể
+```
+
+Hai khái niệm này liên quan nhưng **không giống nhau**.
+
+---
+
+### 3.2. Một số trường quan trọng của `PATH`
+
+| Trường | Ý nghĩa |
+|---|---|
+| `type=PATH` | Đây là audit record mô tả filesystem object |
+| `item=0` | Index của object trong audit event |
+| `name=/etc/passwd` | Đường dẫn của object |
+| `inode=123456` | Inode của file |
+| `dev=08:05` | Device chứa filesystem object |
+| `mode=file,644` | Loại object và permission |
+| `ouid=root` | Owner UID của object |
+| `ogid=root` | Owner GID của object |
+| `nametype=NORMAL` | Loại quan hệ của path với syscall |
+
+---
+
+### 3.3. Ví dụ từ event `execve`
+
+Trong log:
+
+```text
+type=PATH
+item=0
+name=/usr/bin/whoami
+inode=1443106
+dev=08:05
+mode=file,755
+ouid=root
+ogid=root
+nametype=NORMAL
+```
+
+và:
+
+```text
+type=PATH
+item=1
+name=/lib64/ld-linux-x86-64.so.2
+inode=1444000
+dev=08:05
+mode=file,755
+ouid=root
+ogid=root
+nametype=NORMAL
+```
+
+Điều này cho thấy audit event của việc thực thi `whoami` có liên quan đến:
+
+```text
+/usr/bin/whoami
+/lib64/ld-linux-x86-64.so.2
+```
+
+Đặc biệt:
+
+```text
+exe=/usr/bin/whoami
+```
+
+trong `SYSCALL` cho biết executable được thực thi, còn `PATH` cung cấp thông tin filesystem object liên quan đến event.
+
+---
+
+## 4. Theo dõi một `PATH` cụ thể bằng watch rule
+
+Nếu mục tiêu là:
+
+> **"Tôi muốn biết khi nào `/etc/passwd` bị thay đổi."**
+
+Có thể sử dụng watch rule:
+
+```bash
+sudo auditctl -w /etc/passwd -p wa -k passwd_changes
+```
+
+Trong đó:
+
+```text
+-w /etc/passwd
+```
+
+→ theo dõi `/etc/passwd`.
+
+```text
+-p w
+```
+
+→ theo dõi việc ghi vào file.
+
+```text
+-p a
+```
+
+→ theo dõi thay đổi thuộc tính của file, ví dụ các thao tác như `chmod`, `chown`.
+
+```text
+-p wa
+```
+
+→ theo dõi cả:
+
+```text
+write
++
+attribute change
+```
+
+```text
+-k passwd_changes
+```
+
+→ gắn key `passwd_changes` để dễ tìm event sau này.
+
+---
+
+### 4.1. Tạo event để kiểm tra
+
+Không nên tùy tiện sửa `/etc/passwd` trong bài lab.
+
+Có thể tạo một file lab:
+
+```bash
+sudo touch /tmp/audit_test
+sudo auditctl -w /tmp/audit_test -p wa -k test_path
+```
+
+Sau đó:
+
+```bash
+echo "audit-test" | sudo tee -a /tmp/audit_test
+```
+
+Xem event:
+
+```bash
+sudo ausearch -k test_path -i
+```
+
+Có thể thấy:
+
+```text
+type=PATH
+name=/tmp/audit_test
+...
+```
+
+---
+
+## 5. Watch rule và syscall rule khác nhau như thế nào?
+
+### Cách 1: Watch rule
+
+```bash
+sudo auditctl -w /etc/passwd -p wa -k passwd_changes
+```
+
+Cách này đơn giản:
+
+```text
+Tôi quan tâm đến file:
+/etc/passwd
+```
+
+### Cách 2: Rule theo syscall/path
+
+Ví dụ:
+
+```bash
+sudo auditctl -a always,exit \
+-F arch=b64 \
+-F path=/etc/passwd \
+-F perm=wa \
+-k passwd_changes
+```
+
+Cách này cho phép xây dựng điều kiện audit chi tiết hơn.
+
+Có thể nhớ:
+
+```text
+watch rule
+    ↓
+Tập trung vào FILE
+
+syscall rule
+    ↓
+Tập trung vào SYSTEM CALL
+
+PATH record
+    ↓
+Mô tả FILE/OBJECT liên quan đến EVENT
+```
+
+---
+
+## 6. Mục đích của `PATH`
+
+Nếu `EXECVE` trả lời:
+
+```text
+"Chương trình nào được chạy?"
+```
+
+thì `PATH` giúp trả lời:
+
+```text
+"File/filesystem object nào liên quan đến hành động?"
+```
+
+Ví dụ:
+
+```text
+User
+ ↓
+thực hiện một hành động
+ ↓
+syscall
+ ↓
+Audit event
+ ├── SYSCALL → syscall nào?
+ ├── EXECVE  → command arguments?
+ └── PATH    → file/object nào liên quan?
+```
+
+---
+
+# 7. Theo dõi `USERAUTH`
+
+## 7.1. `USERAUTH` có phải là một syscall không?
+
+**Không.**
+
+Đây là điểm rất quan trọng.
+
+Không có syscall:
+
+```text
+userauth()
+```
+
+và cũng không có rule đơn giản:
+
+```bash
+auditctl -S userauth
+```
+
+Thay vào đó, `USER_AUTH`, `USER_LOGIN`, `USER_START`, `USER_END`, `CRED_ACQ`, `CRED_DISP`... là **các loại audit record liên quan đến authentication/session**, thường được tạo từ userspace/PAM thông qua audit framework.
+
+---
+
+## 8. PAM là gì?
+
+**PAM (Pluggable Authentication Modules)** là framework xác thực của Linux.
+
+Nó cung cấp các module để xử lý những hoạt động như:
+
+```text
+login
+SSH authentication
+sudo
+su
+password authentication
+account locking
+session management
+```
+
+Có thể hình dung:
+
+```text
+User
+ ↓
+SSH / login / sudo / su
+ ↓
+PAM
+ ↓
+PAM modules
+ ↓
+Authentication / Session
+ ↓
+Audit event
+ ↓
+auditd
+ ↓
+/var/log/audit/audit.log
+```
+
+Một số PAM module thường gặp:
+
+| Module | Vai trò |
+|---|---|
+| `pam_unix` | Xác thực Unix truyền thống |
+| `pam_faillock` | Theo dõi/xử lý login thất bại và khóa tài khoản theo policy |
+| `pam_loginuid` | Thiết lập Audit Login UID (`auid`) |
+| `pam_tty_audit` | Audit hoạt động bàn phím trong TTY khi được cấu hình |
+
+---
+
+# 9. Các authentication record quan trọng
+
+## 9.1. `USER_AUTH`
+
+`USER_AUTH` biểu diễn một sự kiện xác thực do userspace/PAM tạo ra.
+
+Truy vấn:
+
+```bash
+sudo ausearch -m USER_AUTH -i
+```
+
+Mục tiêu:
+
+```text
+USER_AUTH
+    ↓
+Có hoạt động authentication
+    ↓
+Thành công hay thất bại?
+```
+
+---
+
+## 9.2. `USER_LOGIN`
+
+Liên quan đến sự kiện login.
+
+Xem:
+
+```bash
+sudo ausearch -m USER_LOGIN -i
+```
+
+Tìm login thất bại:
+
+```bash
+sudo ausearch -m USER_LOGIN -sv no -i
+```
+
+Trong đó:
+
+```text
+-sv no
+```
+
+có nghĩa là tìm những event có:
+
+```text
+success = no
+```
+
+---
+
+## 9.3. `USER_START` và `USER_END`
+
+Hai record này liên quan đến lifecycle của session:
+
+```text
+USER_START
+    ↓
+Session bắt đầu
+
+USER_END
+    ↓
+Session kết thúc
+```
+
+Có thể tìm:
+
+```bash
+sudo ausearch -m USER_START -i
+sudo ausearch -m USER_END -i
+```
+
+---
+
+# 10. `USER_CMD`
+
+`USER_CMD` là audit record liên quan đến command được thực hiện thông qua cơ chế user command auditing, thường gặp trong ngữ cảnh `sudo`.
+
+Ví dụ:
+
+```bash
+sudo id
+```
+
+Có thể xuất hiện:
+
+```text
+type=USER_CMD
+...
+```
+
+Record này giúp điều tra:
+
+```text
+User nào?
+    ↓
+đã thực hiện command nào?
+```
+
+Tuy nhiên, không nên đồng nhất:
+
+```text
+USER_CMD
+```
+
+với:
+
+```text
+EXECVE
+```
+
+`EXECVE` là record chứa argument của syscall `execve`, còn `USER_CMD` là một loại audit record khác được sinh trong ngữ cảnh user-command auditing.
+
+---
+
+# 11. `auid` — User ID quan trọng khi forensic
+
+Một trường cực kỳ quan trọng trong auditd là:
+
+```text
+auid
+```
+
+`auid` = **Audit User ID**.
+
+Nó dùng để xác định user ban đầu của audit session.
+
+Ví dụ:
+
+```text
+uid=root
+auid=ubuntusiem
+```
+
+Có thể hiểu:
+
+```text
+Process hiện tại:
+    root
+
+User bắt đầu audit session:
+    ubuntusiem
+```
+
+Điều này rất hữu ích khi user chuyển quyền:
+
+```text
+ubuntusiem
+      ↓
+sudo
+      ↓
+root
+```
+
+Sau đó:
+
+```text
+uid=root
+auid=ubuntusiem
+```
+
+Nhờ `auid`, analyst vẫn có thể truy ngược:
+
+> "Process hiện tại chạy bằng root, nhưng session ban đầu được tạo bởi user `ubuntusiem`."
+
+---
+
+# 12. `pam_loginuid`
+
+Để audit session có thể gắn đúng Audit Login UID, hệ thống thường sử dụng:
+
+```text
+pam_loginuid.so
+```
+
+Kiểm tra:
+
+```bash
+grep -R "pam_loginuid" /etc/pam.d/
+```
+
+Có thể thấy:
+
+```text
+session required pam_loginuid.so
+```
+
+Luồng:
+
+```text
+User login
+    ↓
+PAM
+    ↓
+pam_loginuid
+    ↓
+Audit Login UID được thiết lập
+    ↓
+auid
+    ↓
+Các hành động tiếp theo
+```
+
+Đây là lý do `auid` có thể giúp truy vết user gốc ngay cả khi user sau đó dùng:
+
+```text
+su
+sudo
+```
+
+để chuyển sang tài khoản khác.
+
+---
+
+# 13. Thực hành USERAUTH
+
+### 13.1. Kiểm tra `pam_loginuid`
+
+```bash
+grep -R "pam_loginuid" /etc/pam.d/
+```
+
+### 13.2. Kiểm tra login
+
+```bash
+sudo ausearch -m USER_LOGIN -i
+```
+
+Authentication:
+
+```bash
+sudo ausearch -m USER_AUTH -i
+```
+
+### 13.3. Thử `sudo`
+
+Chạy:
+
+```bash
+sudo id
+```
+
+Sau đó:
+
+```bash
+sudo ausearch -m USER_CMD -i
+```
+
+và:
+
+```bash
+sudo ausearch -m USER_AUTH -i
+```
+
+Có thể kết hợp:
+
+```bash
+sudo ausearch -k exec_log -i
+```
+
+để so sánh các loại record.
+
+---
+
+# 14. Theo dõi `SERVICE STOP`
+
+## 14.1. Service stop là gì?
+
+Ví dụ:
+
+```bash
+sudo systemctl stop ssh
+```
+
+Ý nghĩa:
+
+```text
+User yêu cầu systemd
+        ↓
+dừng service ssh
+        ↓
+systemd xử lý request
+        ↓
+service chuyển sang trạng thái inactive/stopped
+```
+
+Điểm quan trọng:
+
+> **`service stop` không phải là một syscall riêng.**
+
+Không có:
+
+```text
+-S service_stop
+```
+
+Thay vào đó phải quan sát ở nhiều lớp.
+
+---
+
+# 15. Lớp 1 — theo dõi `systemctl` bằng `execve`
+
+Tạo rule:
+
+```bash
+sudo auditctl -a always,exit \
+-F arch=b64 \
+-F path=/usr/bin/systemctl \
+-S execve \
+-k service_control
+```
+
+Kiểm tra:
+
+```bash
+sudo auditctl -l
+```
+
+---
+
+## 15.1. Tạo service-stop event
+
+Ví dụ với service phù hợp trong lab:
+
+```bash
+sudo systemctl stop <service>
+```
+
+Nếu máy có SSH service:
+
+```bash
+sudo systemctl stop ssh
+```
+
+Sau đó:
+
+```bash
+sudo ausearch -k service_control -i
+```
+
+Có thể thấy:
+
+```text
+type=EXECVE
+argc=3
+a0=systemctl
+a1=stop
+a2=ssh
+```
+
+Có thể hiểu:
+
+```text
+a0 = systemctl
+a1 = stop
+a2 = ssh
+```
+
+→ User đã chạy:
+
+```bash
+systemctl stop ssh
+```
+
+---
+
+# 16. Nhưng chỉ audit `systemctl` là chưa đủ
+
+Đây là điểm rất quan trọng.
+
+`systemctl` chỉ là một client dùng để gửi request tới systemd.
+
+Một chương trình khác có thể giao tiếp với systemd thông qua IPC/API như **D-Bus** mà không cần chạy binary:
+
+```text
+/usr/bin/systemctl
+```
+
+Do đó rule:
+
+```text
+-F path=/usr/bin/systemctl
+```
+
+chỉ giúp phát hiện việc thực thi binary `systemctl`.
+
+Nó không đảm bảo phát hiện **mọi request điều khiển systemd**.
+
+---
+
+# 17. Lớp 2 — `journalctl`
+
+Systemd ghi trạng thái service vào **systemd journal**.
+
+Xem log của một service:
+
+```bash
+sudo journalctl -u <service>
+```
+
+Ví dụ:
+
+```bash
+sudo journalctl -u ssh
+```
+
+Xem các event gần đây:
+
+```bash
+sudo journalctl --since "10 minutes ago"
+```
+
+Có thể thấy các thông tin như:
+
+```text
+Started ...
+Stopped ...
+Failed ...
+```
+
+Do đó:
+
+```text
+auditd
+    ↓
+Ai chạy command gì?
+```
+
+còn:
+
+```text
+systemd journal
+    ↓
+Service thực tế đã chuyển trạng thái như thế nào?
+```
+
+Hai nguồn log bổ sung cho nhau.
+
+---
+
+# 18. Lớp 3 — theo dõi thay đổi unit file
+
+Một cách khác để phát hiện việc vô hiệu hóa service là theo dõi unit file.
+
+Ví dụ:
+
+```bash
+sudo auditctl -w /etc/systemd/system/ \
+-p wa \
+-k systemd_unit_changes
+```
+
+Có thể theo dõi thêm:
+
+```bash
+sudo auditctl -w /lib/systemd/system/ \
+-p wa \
+-k systemd_unit_changes
+```
+
+Mục tiêu:
+
+```text
+Ai đó sửa unit file
+        ↓
+Audit phát hiện thay đổi filesystem
+        ↓
+PATH record
+        ↓
+key=systemd_unit_changes
+```
+
+Điều này quan trọng vì attacker không nhất thiết phải thực hiện:
+
+```bash
+systemctl stop ssh
+```
+
+Họ có thể thay đổi cấu hình service để service không khởi động hoặc hoạt động theo cách mong muốn.
+
+---
+
+# 19. Tổng hợp `SERVICE STOP`
+
+Có thể chia thành 3 câu hỏi:
+
+### Câu hỏi 1: Ai chạy lệnh điều khiển service?
+
+Dùng:
+
+```text
+auditd + execve
+```
+
+Ví dụ:
+
+```text
+systemctl stop ssh
+```
+
+Audit có thể ghi:
+
+```text
+type=EXECVE
+a0=systemctl
+a1=stop
+a2=ssh
+```
+
+### Câu hỏi 2: Service thực sự có dừng không?
+
+Dùng:
+
+```bash
+journalctl -u ssh
+```
+
+Systemd journal cho biết trạng thái thực tế của service.
+
+### Câu hỏi 3: Có ai sửa cấu hình service không?
+
+Dùng audit watch:
+
+```bash
+sudo auditctl -w /etc/systemd/system/ -p wa -k systemd_unit_changes
+```
+
+và:
+
+```bash
+sudo auditctl -w /lib/systemd/system/ -p wa -k systemd_unit_changes
+```
+
+---
+
+# 20. So sánh 5 nhóm cần nhớ
+
+| Nhóm | Câu hỏi cần trả lời | Công cụ/record |
+|---|---|---|
+| `EXECVE` | User/process thực thi chương trình gì? | `EXECVE` |
+| `SYSCALL` | Process gọi syscall nào, kết quả ra sao? | `SYSCALL` |
+| `PATH` | File/object nào liên quan đến event? | `PATH` / watch rule |
+| `USERAUTH` | User nào login/xác thực/khởi tạo session? | `USER_AUTH`, `USER_LOGIN`, `USER_START`, `USER_END`, `USER_CMD` |
+| `SERVICE STOP` | Ai yêu cầu dừng service và service có thực sự dừng không? | `EXECVE` + systemd journal + unit-file audit |
+
+---
+
+# 21. Sơ đồ tổng thể
+
+```text
+                         LINUX AUDIT
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+     EXECVE                SYSCALL                PATH
+        │                     │                     │
+ "Chạy gì?"             "Syscall gì?"        "File nào?"
+        │                     │                     │
+        ▼                     ▼                     ▼
+     argv/argc            result/PID/etc.       filesystem
+        │                     │                     │
+        └─────────────────────┼─────────────────────┘
+                              │
+                              ▼
+                         AUDIT EVENT
+                              │
+                 ┌────────────┴────────────┐
+                 │                         │
+                 ▼                         ▼
+             USERAUTH                SERVICE STOP
+                 │                         │
+           "Ai login?"              "Ai stop?"
+           "Ai sudo?"               "Có thực sự stop?"
+                 │                         │
+                 ▼                         ▼
+          PAM / auid              auditd + journal
+```
+
+---
+
+# 22. Cách nhớ ngắn gọn
+
+```text
+EXECVE
+→ Chạy chương trình gì?
+
+SYSCALL
+→ Kernel syscall nào được gọi?
+
+PATH
+→ File nào liên quan/bị tác động?
+
+USERAUTH
+→ User nào login/xác thực/session?
+
+SERVICE STOP
+→ Ai yêu cầu dừng service + service có thực sự dừng?
+```
+
+Một audit event có thể gồm nhiều record:
+
+```text
+Một audit event
+    ↓
+nhiều record
+    ├── SYSCALL
+    ├── EXECVE
+    ├── PATH
+    ├── CWD
+    ├── PROCTITLE
+    └── ...
+```
+
+Các record có cùng:
+
+```text
+msg=audit(...:serial)
+```
+
+thuộc cùng một audit event và nên được **ghép lại khi phân tích**, thay vì đọc từng record một cách độc lập.
+
