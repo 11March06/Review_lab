@@ -117,3 +117,43 @@ sudo auditctl -l
 ```
 <img width="1526" height="122" alt="image" src="https://github.com/user-attachments/assets/b2eafcde-5b1f-47ca-952f-1c9bccef90c1" />
 
+Tạo event
+```
+whoami
+id
+```
+<img width="1522" height="192" alt="image" src="https://github.com/user-attachments/assets/11290907-73af-43e3-886d-d0da1aa29335" />
+
+```
+ls /tmp
+cat /etc/hostname
+```
+<img width="1504" height="708" alt="image" src="https://github.com/user-attachments/assets/a6cfc3d8-87cb-4ccd-aef6-94fb510a547a" />
+
+- Tìm các event mà rule `exec_log` bắt được:
+```
+sudo ausearch -k exec_log -i
+```
+Để chỉ xem phần command arguments: 
+```
+sudo ausearch -k exec_log -m EXECVE -i
+```
+
+- Cụ thể log sau những lệnh vừa rồi:
+
+`whoami`
+<img width="2034" height="482" alt="image" src="https://github.com/user-attachments/assets/9fa7214f-b762-41ef-8ba9-9ffde2955c25" />
+
+`id`
+<img width="2038" height="486" alt="image" src="https://github.com/user-attachments/assets/a4f28bc2-ad2a-415c-91b4-84b9fba2912d" />
+
+`ls /tmp`
+<img width="2032" height="496" alt="image" src="https://github.com/user-attachments/assets/be1fc384-9205-475a-9a62-e9d9d40d2aa5" />
+
+`cat /etc/hostname`
+<img width="2048" height="490" alt="image" src="https://github.com/user-attachments/assets/7cdbc4f2-55db-4bc7-9d45-11ea6ea5d863" />
+
+
+
+
+  
