@@ -1,3 +1,20 @@
+# Bảng So Sánh: auditd (Linux) & Audit Policy (Windows)
+
+| Khái niệm | Linux (auditd) | Windows (Audit Policy) |
+|---|---|---|
+| **Theo dõi thực thi chương trình** | Rule syscall `-a always,exit -S execve` → sinh bản ghi `SYSCALL` + `EXECVE` (chứa argv) | Subcategory **Process Creation** → Event ID **4688** (cần bật thêm "Include command line" để thấy tham số) |
+| **Theo dõi truy cập file/thư mục** | `-w /path -p rwxa` (watch rule, tự đủ, không cần bước 2) | Bật category **Object Access → File System** **+** gắn **SACL** riêng cho từng file (`icacls /setaudit`) → Event ID 4663/4656. Thiếu SACL = không có log dù đã bật category |
+| **Theo dõi đăng nhập/xác thực** | Sinh qua **PAM** (`pam_loginuid` bắt buộc để giữ `auid` gốc) → bản ghi `USER_AUTH`, `USER_LOGIN`, `CRED_ACQ` | Subcategory **Logon** → Event ID **4624** (thành công) / **4625** (thất bại); **Credential Validation** → 4776 |
+| **Theo dõi dừng/khởi động dịch vụ** | Không có rule riêng — kết hợp: execve trên `systemctl`, watch unit file (`/etc/systemd/system/`), và đọc `journalctl` (vì lệnh có thể gọi qua D-Bus, bỏ qua binary) | Subcategory **System Integrity**/**Security System Extension**; nguồn đáng tin cậy hơn: **System log Event ID 7036** (service running/stopped), 7040 (đổi start type) |
+| **Điểm chèn hook** | Kernel syscall table + LSM, qua netlink | LSASS / Security Reference Monitor (API riêng, không phải syscall table) |
+| **Đơn vị cấu hình** | Rule nạp bằng `auditctl` (runtime) hoặc `augenrules` (bền vững, từ `/etc/audit/rules.d/*.rules`) | Bật/tắt subcategory bằng `auditpol`, hoặc qua GPO → Advanced Audit Policy Configuration |
+| **File cấu hình chính** | `/etc/audit/auditd.conf` (log_file, max_log_file, num_logs, action khi đầy đĩa: `ROTATE`/`SUSPEND`/`HALT`) | GPO / Local Security Policy; log size qua `wevtutil sl Security /ms:<bytes>` |
+| **Gắn nhãn để lọc log** | `-k key_name` → lọc bằng `ausearch -k key_name` | Không có "key" tương đương — lọc theo Event ID + subcategory |
+| **Nơi lưu log** | File text `/var/log/audit/audit.log` (dạng RAW hoặc ENRICHED) | Binary `.evtx`, quản lý bởi Event Log service (kênh `Security`) |
+| **Công cụ truy vấn** | `ausearch`, `aureport` | `Get-WinEvent`, `wevtutil`, Event Viewer |
+| **Chuyển tiếp log tập trung (SIEM)** | `audisp-remote`, rsyslog, journald forward | Windows Event Forwarding (WEF/WEC), Sysmon + agent |
+| **Khóa cấu hình chống sửa đổi** | `-e 2` trong rule (cần reboot mới đổi lại được) | `Force audit policy subcategory settings to override category settings` (Security Options) |
+
 # Bảng Tổng Hợp Tri Thức: auditd (Linux) & Audit Policy (Windows)
 
 ## Linux — Công cụ & Daemon
