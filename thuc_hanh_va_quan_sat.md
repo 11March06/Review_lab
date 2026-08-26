@@ -1,4 +1,4 @@
-# LINUX 
+<img width="1600" height="110" alt="image" src="https://github.com/user-attachments/assets/9d9c9123-6ced-43ba-bb13-453e2d5a374a" /># LINUX 
 ## SET UP LINUX VÀ AUDIT
 ### CHECK KERNEL 
 ```
@@ -774,7 +774,7 @@ attribute change
 
 ### 4.1. Tạo event để kiểm tra
 
-Không nên tùy tiện sửa `/etc/passwd` trong bài lab.
+Không tùy tiện sửa `/etc/passwd` trong bài lab.
 
 Có thể tạo một file lab:
 
@@ -796,12 +796,12 @@ sudo ausearch -k test_path -i
 ```
 
 Có thể thấy:
-
 ```text
 type=PATH
 name=/tmp/audit_test
 ...
 ```
+    <img width="1600" height="110" alt="image" src="https://github.com/user-attachments/assets/9d69be22-9d0d-4d3e-b976-9589bc33062c" />
 
 ---
 
@@ -965,6 +965,7 @@ Truy vấn:
 ```bash
 sudo ausearch -m USER_AUTH -i
 ```
+<img width="1600" height="192" alt="image" src="https://github.com/user-attachments/assets/aaa8e100-9c12-4423-b53b-937de29df2df" />
 
 Mục tiêu:
 
@@ -987,6 +988,7 @@ Xem:
 ```bash
 sudo ausearch -m USER_LOGIN -i
 ```
+<img width="1608" height="140" alt="image" src="https://github.com/user-attachments/assets/e2b4f20e-2d67-4af4-b7e6-18dea06d3850" />
 
 Tìm login thất bại:
 
@@ -1028,6 +1030,9 @@ Có thể tìm:
 sudo ausearch -m USER_START -i
 sudo ausearch -m USER_END -i
 ```
+<img width="1604" height="188" alt="image" src="https://github.com/user-attachments/assets/52e3a911-1f6b-4893-93e5-888e16e4647c" />
+
+<img width="1602" height="188" alt="image" src="https://github.com/user-attachments/assets/692279ec-ca4b-4a6f-a4bf-7fba3c42bbfd" />
 
 ---
 
@@ -1040,6 +1045,12 @@ Ví dụ:
 ```bash
 sudo id
 ```
+hoặc
+```
+sudo ausearch -m USER_CMD -i
+```
+
+<img width="1594" height="156" alt="image" src="https://github.com/user-attachments/assets/d5269f44-3837-4396-b594-c91372c42468" />
 
 Có thể xuất hiện:
 
@@ -1171,55 +1182,6 @@ sudo
 
 ---
 
-# 13. Thực hành USERAUTH
-
-### 13.1. Kiểm tra `pam_loginuid`
-
-```bash
-grep -R "pam_loginuid" /etc/pam.d/
-```
-
-### 13.2. Kiểm tra login
-
-```bash
-sudo ausearch -m USER_LOGIN -i
-```
-
-Authentication:
-
-```bash
-sudo ausearch -m USER_AUTH -i
-```
-
-### 13.3. Thử `sudo`
-
-Chạy:
-
-```bash
-sudo id
-```
-
-Sau đó:
-
-```bash
-sudo ausearch -m USER_CMD -i
-```
-
-và:
-
-```bash
-sudo ausearch -m USER_AUTH -i
-```
-
-Có thể kết hợp:
-
-```bash
-sudo ausearch -k exec_log -i
-```
-
-để so sánh các loại record.
-
----
 
 # 14. Theo dõi `SERVICE STOP`
 
@@ -1268,6 +1230,7 @@ sudo auditctl -a always,exit \
 -S execve \
 -k service_control
 ```
+<img width="954" height="84" alt="image" src="https://github.com/user-attachments/assets/dfd34710-cc29-4db8-93e9-1b7475871e9a" />
 
 Kiểm tra:
 
@@ -1489,6 +1452,7 @@ và:
 ```bash
 sudo auditctl -w /lib/systemd/system/ -p wa -k systemd_unit_changes
 ```
+<img width="1600" height="78" alt="image" src="https://github.com/user-attachments/assets/0ed62a20-62d2-44b6-9a51-d1d4ad37f7b4" />
 
 ---
 
