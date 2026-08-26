@@ -1,5 +1,3 @@
-# Hướng dẫn cấu hình Audit Logging: auditd (Linux) & Audit Policy (Windows)
-
 ## Phần 1: auditd trên Linux
 
 ### 1.1 Kiến trúc tổng quan
