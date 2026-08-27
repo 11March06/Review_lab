@@ -191,8 +191,13 @@ Event ID 4625
 
 Ví dụ:
 - Process Creation → Event ID: 4688 → một process được tạo.
+<img width="403" height="130" alt="image" src="https://github.com/user-attachments/assets/0fb7d94d-1ba8-43a4-bcf9-30adbd9ef3cd" />
+
 - Successful Logon → Event ID: 4624 → đăng nhập thành công.
+<img width="401" height="125" alt="image" src="https://github.com/user-attachments/assets/3246eac0-2bc4-404b-a73d-cb5bd0d4c649" />
+
 - Failed Logon → Event ID: 4625 → đăng nhập thất bại.
+<img width="496" height="130" alt="image" src="https://github.com/user-attachments/assets/87b30713-499e-432f-adb0-0b6f03a439ad" />
 
 Do đó có thể nhớ: Linux dùng **record type**, Windows dùng **Event ID**.
 
@@ -329,7 +334,17 @@ Windows thường quan sát thông qua các Security Event ID. Ví dụ:
 - 4624 → Successful Logon
 - 4625 → Failed Logon
 - 4634 → Logoff
-- 4647 → User initiated logoff
+  <img width="430" height="101" alt="image" src="https://github.com/user-attachments/assets/b6c1e54d-ee42-4310-92e9-8cf50f45b774" />
+
+- 4647 → User initiated logoff (là sự kiện Windows Security Log ghi nhận rằng người dùng đã chủ động yêu cầu đăng xuất (log off) khỏi phiên đăng nhập)
+```
+EventData 
+
+  TargetUserSid S-1-5-21-1843987623-3258247060-2434344836-500 
+  TargetUserName Administrator 
+  TargetDomainName ADMIN 
+  TargetLogonId 0x3fdd6 
+```
 
 Ví dụ luồng:
 ```
@@ -493,11 +508,13 @@ Sau đó nếu muốn xem riêng process:
 ```
 auditpol /get /subcategory:"Process Creation"
 ```
+<img width="436" height="132" alt="image" src="https://github.com/user-attachments/assets/89ba6bc4-50fa-4bd1-91c1-086422691093" />
 
 Authentication:
 ```
 auditpol /get /subcategory:"Logon"
 ```
+<img width="444" height="79" alt="image" src="https://github.com/user-attachments/assets/635f1cb8-5b81-4227-9edc-654af6d8f426" />
 
 Sẽ biết ngay:
 ```
@@ -512,11 +529,13 @@ Trên CMD Administrator:
 ```
 auditpol /set /subcategory:"Process Creation" /success:enable
 ```
+<img width="624" height="32" alt="image" src="https://github.com/user-attachments/assets/c36e027b-3715-4f18-92ef-aa268ff509a1" />
 
 Kiểm tra:
 ```
 auditpol /get /subcategory:"Process Creation"
 ```
+<img width="515" height="77" alt="image" src="https://github.com/user-attachments/assets/4ac2201b-00ff-4e07-94cd-708d3ce317db" />
 
 Sau đó chạy: `whoami` hoặc `cmd /c whoami`
 
@@ -527,112 +546,7 @@ Windows Logs
 → tìm: 4688
 ```
 
-## 17. Bật command line
-
-Mở `secpol.msc`, vào:
-```
-Advanced Audit Policy Configuration
-→ System Audit Policies
-→ Detailed Tracking
-→ Audit Process Creation
-```
-
-Bật **Success**.
-
-Sau đó tìm policy:
-```
-Administrative Templates
-→ System
-→ Audit Process Creation
-→ Include command line in process creation events
-```
-
-Bật policy này.
-
-Mục tiêu cuối:
-```
-cmd.exe
-   ↓
-Process Creation
-   ↓
-4688
-   ↓
-Command Line
-```
-
-## 18. Cấu hình Authentication
-
-Chạy:
-```
-auditpol /set /subcategory:"Logon" /success:enable /failure:enable
-```
-
-Kiểm tra:
-```
-auditpol /get /subcategory:"Logon"
-```
-
-Sau đó: `Win + L` đăng nhập lại.
-
-Vào Event Viewer → Windows Logs → Security → Tìm: **4624**
-
-## 19. Tư duy giống bài Linux
-
-Linux theo:
-```
-Rule
- ↓
-Hành động
- ↓
-Audit event
- ↓
-Record
- ↓
-Quan sát log
-```
-
-Windows cũng làm y hệt về mặt tư duy:
-```
-Audit Policy
- ↓
-Hành động
- ↓
-Windows Security Auditing
- ↓
-Event ID
- ↓
-Event Viewer / PowerShell
-```
-
-Ví dụ:
-
-**Linux**
-```
-auditctl rule
- ↓
-whoami
- ↓
-execve syscall
- ↓
-EXECVE + SYSCALL
- ↓
-ausearch
-```
-
-**Windows**
-```
-Audit Process Creation
- ↓
-whoami.exe
- ↓
-Process Creation audit
- ↓
-Event ID 4688
- ↓
-Event Viewer
-```
-
-## 20. Bảng đối chiếu 
+## 27. Bảng đối chiếu 
 
 | Linux auditd | Windows Audit |
 |---|---|
