@@ -40,7 +40,9 @@ Khoảng cách Wasserstein được ưu tiên vì nó vẫn **hữu hạn ngay c
 
 #### Bước 4: Tối ưu hóa hàm mục tiêu cục bộ điều hòa
 Mỗi client tối ưu hóa hàm loss cục bộ tích hợp bao gồm loss phân loại chuẩn và loss phạt khoảng cách Wasserstein
+
 $$F_i(\theta_i, \phi_i, \mu_{1:C}) = \omega_i f_i(\theta_i, \phi_i) + \lambda_1 \omega_i \sum_{c\in\mathcal{Y}_i} W_2^2 \left( \mu_c, \nu_{\phi_i}^{(c)} \right) + \lambda_2 \omega_i \sum_{c\in\mathcal{Y}_i} \frac{1}{J} \sum_{j=1}^J \ell \left( c, g_{\theta_i}^{(i)} \left[ Z_c^{(j)} \right] \right)$$
+
 *(Trong đó, thành phần thứ 3 là tùy chọn lấy mẫu trực tiếp từ phân phối neo để hiệu chỉnh classifier, giải quyết hiện tượng trôi hiệp biến covariate shift *
 
 #### Bước 5: Cập nhật song song cục bộ và Tổng hợp toàn cục trên Server
