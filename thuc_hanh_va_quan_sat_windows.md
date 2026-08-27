@@ -122,6 +122,7 @@ Logon/Logoff
 Detailed Tracking
   Process Creation                         Success
 ```
+<img width="440" height="139" alt="image" src="https://github.com/user-attachments/assets/1e53e935-e9b5-403c-94e2-8af4b766d23e" />
 
 Ý nghĩa:
 - **Success** → ghi khi hành động thành công.
@@ -167,7 +168,7 @@ Windows Logs
 Security
 ```
 
-Đây là nơi sẽ thực hành quan sát.
+Đây là nơi sẽ quan sát log.
 
 ## 5. Event ID là gì?
 
@@ -216,7 +217,17 @@ a1=--color=auto
 a2=/tmp
 ```
 
-Trên Windows, ý tưởng tương ứng là **Audit Process Creation**. Sau đó Windows sinh **Event ID 4688**.
+Trên Windows, ý tưởng tương ứng là **Audit Process Creation**. Sau đó Windows sinh **Event ID 4688**.\
+
+Bật process creation
+```
+auditpol /set /subcategory:"Process Creation" /success:enable
+auditpol /get /subcategory:"Process Creation"
+```
+<img width="628" height="102" alt="image" src="https://github.com/user-attachments/assets/d9c2fea8-d834-432a-87ac-94f3d8b5317b" />
+
+Bật log 4688
+<img width="536" height="150" alt="image" src="https://github.com/user-attachments/assets/f02eae0f-7128-4229-bd95-d0fad226cb29" />
 
 Event này có thể cung cấp thông tin như:
 - New Process Name
@@ -227,7 +238,7 @@ Event này có thể cung cấp thông tin như:
 
 **Command Line** đặc biệt quan trọng.
 
-Ví dụ bạn chạy: `whoami`
+Ví dụ chạy: `whoami`
 
 Windows có thể ghi:
 ```
@@ -236,6 +247,51 @@ C:\Windows\System32\whoami.exe
 
 Command Line:
 whoami
+```
+Cụ thể EventViewer
+```
+-EventData 
+
+  SubjectUserSid S-1-5-21-1843987623-3258247060-2434344836-500 
+  SubjectUserName Administrator 
+  SubjectDomainName ADMIN 
+  SubjectLogonId 0x409b1 
+  NewProcessId 0x2c28 
+  NewProcessName C:\Windows\System32\whoami.exe 
+  TokenElevationType %%1936 
+  ProcessId 0x3220 
+  CommandLine "C:\Windows\system32\whoami.exe" 
+  TargetUserSid S-1-0-0 
+  TargetUserName - 
+  TargetDomainName - 
+  TargetLogonId 0x0 
+  ParentProcessName C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe 
+  MandatoryLabel S-1-16-12288 
+```
+
+hoặc
+Test Commandline LAB-4688-TEST
+
+<img width="557" height="34" alt="image" src="https://github.com/user-attachments/assets/942ea81a-9e0b-495a-93df-7c0cfc37659a" />
+Cụ thể log Event Viewer
+```
+- EventData 
+
+  SubjectUserSid S-1-5-21-1843987623-3258247060-2434344836-500 
+  SubjectUserName Administrator 
+  SubjectDomainName ADMIN 
+  SubjectLogonId 0x409b1 
+  NewProcessId 0x2b04 
+  NewProcessName C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe 
+  TokenElevationType %%1936 
+  ProcessId 0x3220 
+  CommandLine "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -Command "Write-Host 'LAB-4688-TEST'" 
+  TargetUserSid S-1-0-0 
+  TargetUserName - 
+  TargetDomainName - 
+  TargetLogonId 0x0 
+  ParentProcessName C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe 
+  MandatoryLabel S-1-16-12288 
 ```
 
 Nếu chạy: `powershell.exe -Command "Get-Process"` thì khi cấu hình phù hợp, event có thể chứa command line tương ứng.
