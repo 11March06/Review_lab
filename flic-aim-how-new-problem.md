@@ -33,16 +33,10 @@ Mỗi client $i$ được trang bị một hàm nhúng cục bộ có thể họ
 
 Giả định Gaussian cho công thức đóng siêu tốc: Nhóm tác giả giả định phân phối neo là Gaussian $\mu_c = \mathcal{N}(v_c, \Sigma_c)$ và xấp xỉ phân phối nhúng thực nghiệm của client cũng bằng Gaussian $\hat{\nu}_{\phi_i}^{(c)} = \mathcal{N}(\hat{m}_i^{(c)}, \hat{\Sigma}_i^{(c)})$. Điều này mang lại công thức dạng đóng cho khoảng cách Wasserstein, giúp tránh các phép tính tích phân phức tạp:
 
-$$
-W_2^2\left(\mu_c,\nu_{\phi_i}^{(c)}\right)
-=
-\left\|v_c-m_i^{(c)}\right\|^2
-+
-\mathfrak{B}^2\left(\Sigma_c,\Sigma_i^{(c)}\right)
-$$
+<img width="344" height="55" alt="image" src="https://github.com/user-attachments/assets/7d595d50-ac46-46d8-a53f-6c2599b14215" />
 
-Khoảng cách Wasserstein được ưu tiên vì nó vẫn **hữu hạn ngay cả khi hai phân phối hoàn toàn không chồng lấn nhau** (tức là không có phần giao nhau về support) [8, 30].
-    Trong đó $\mathfrak{B}$ biểu thị khoảng cách Bures giữa hai ma trận hiệp phương sai [9, 126]. Khoảng cách Wasserstein được ưu tiên vì nó luôn hữu hạn kể cả khi các phân phối ban đầu hoàn toàn lệch nhau (không overlap về mặt support) 
+Khoảng cách Wasserstein được ưu tiên vì nó vẫn **hữu hạn ngay cả khi hai phân phối hoàn toàn không chồng lấn nhau** (tức là không có phần giao nhau về support).
+    Trong đó $\mathfrak{B}$ biểu thị khoảng cách Bures giữa hai ma trận hiệp phương sai. Khoảng cách Wasserstein được ưu tiên vì nó luôn hữu hạn kể cả khi các phân phối ban đầu hoàn toàn lệch nhau (không overlap về mặt support) 
 
 #### Bước 4: Tối ưu hóa hàm mục tiêu cục bộ điều hòa
 Mỗi client tối ưu hóa hàm loss cục bộ tích hợp bao gồm loss phân loại chuẩn và loss phạt khoảng cách Wasserstein
