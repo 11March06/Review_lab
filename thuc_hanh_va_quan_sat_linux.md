@@ -1,4 +1,4 @@
-<img width="1600" height="110" alt="image" src="https://github.com/user-attachments/assets/9d9c9123-6ced-43ba-bb13-453e2d5a374a" /># LINUX 
+# LINUX 
 ## SET UP LINUX VÀ AUDIT
 ### CHECK KERNEL 
 ```
