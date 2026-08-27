@@ -285,4 +285,4 @@ wevtutil epl Security C:\export\security.evtx
 
 ---
 
-*Tài liệu này mang tính tham khảo kỹ thuật, tổng hợp theo tài liệu chính thức của Red Hat/CentOS (man auditd.conf, man auditctl) và Microsoft Learn (Advanced security audit policy settings). Với môi trường production, nên đối chiếu thêm với CIS Benchmark tương ứng phiên bản hệ điều hành đang dùng trước khi áp dụng.*
+
