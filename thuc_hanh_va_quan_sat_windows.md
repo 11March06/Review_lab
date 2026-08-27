@@ -279,6 +279,7 @@ Test Commandline LAB-4688-TEST
 
 <img width="557" height="34" alt="image" src="https://github.com/user-attachments/assets/942ea81a-9e0b-495a-93df-7c0cfc37659a" />
 Cụ thể log Event Viewer
+
 ```
 - EventData 
 
@@ -298,6 +299,7 @@ Cụ thể log Event Viewer
   ParentProcessName C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe 
   MandatoryLabel S-1-16-12288 
 ```
+
 
 Nếu chạy: `powershell.exe -Command "Get-Process"` thì khi cấu hình phù hợp, event có thể chứa command line tương ứng.
 
