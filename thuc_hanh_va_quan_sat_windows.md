@@ -625,3 +625,11 @@ Audit Policy
    ↓
 Event Viewer
 ```
+
+
+Object Access Auditing là cơ chế Windows ghi log khi một tài khoản/process thực hiện các thao tác trên một object được audit.
+Object Access Auditing là cơ chế của Windows dùng để ghi nhận các hoạt động truy cập vào các object như file, folder hoặc registry. Việc audit file system yêu cầu bật Audit File System và cấu hình SACL trên object cần theo dõi. Event 4663 là một trong các event quan trọng để xác định user/process nào đã truy cập object và thực hiện loại thao tác nào.
+Bật File Audit System
+<img width="689" height="121" alt="image" src="https://github.com/user-attachments/assets/c39821e5-61d9-4975-82ba-313b303034c5" />
+
+
